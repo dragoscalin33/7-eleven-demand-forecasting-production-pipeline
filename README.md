@@ -1,143 +1,114 @@
-#  7-Eleven Retail Demand Forecasting Production Pipeline
+#  7-Eleven Retail Demand Forecasting
 
-> **Achieved an Elite SMAPE of 12.46% on the CP All / 7-Eleven benchmark using a Global LightGBM Gradient Boosting architecture.**
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![LightGBM](https://img.shields.io/badge/LightGBM-4.1-brightgreen.svg)](https://lightgbm.readthedocs.io/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-##  Overview
+> **90-day store-item sales forecasting for the CP All / 7-Eleven network using a global LightGBM model — achieving 12.46% SMAPE on held-out data.**
 
-This project addresses the **Multi-step Time Series Forecasting** challenge for 7-Eleven (CP All). The objective is to forecast 90 days of daily sales across 500 unique store-item combinations.
+---
 
-Instead of traditional per-series modeling, this solution implements a **Global Model approach**. This allows the algorithm to learn complex cross-series seasonalities and trends, providing a more robust and scalable solution for large-scale retail environments.
+## Overview
 
-##  Business Problem
+This project forecasts daily sales across **500 unique store-item combinations** (10 stores × 50 items) for a 90-day horizon, using 5 years of historical data (2013–2017).
 
-Inventory is a primary driver of retail margins. Overstocking traps capital, while understocking leads to lost revenue and customer churn.
+The core idea is to treat this as a **single supervised regression problem** rather than fitting 500 separate time series models. A global LightGBM model learns shared seasonality patterns across all series simultaneously, which is both more accurate and more scalable.
 
-### Success Criteria
+The full pipeline — from raw CSV ingestion to final forecast — runs end-to-end in a single notebook.
 
-* 
-**Inventory Optimization**: Accurate 90-day forecasts enable precise stock adjustments, specifically targeting the "January Drop" following the Q4 holiday peak.
+---
 
+## Results
 
-* 
-**Operational Velocity**: The modular pipeline is designed to reduce the time needed to onboard and forecast new store-item data.
+| Evaluation Set | SMAPE |
+|---|---|
+| Validation (Oct–Dec 2017, held out) | **12.46%** |
 
+The model correctly captures the seasonal drop from the December peak into January — a key test for any retail forecasting solution.
 
-* 
-**Financial Reliability**: By achieving low validation variance, the model provides a dependable baseline for quarterly financial planning.
+---
 
+## How It Works
 
+### Feature Engineering
 
-##  Data Description
+The most important step. Rather than using raw sales directly, the model learns from carefully constructed lag and window features that respect the forecast horizon:
 
-* 
-**Source**: 5 years of daily sales data (2013-2017).
+- **Lag features** at 90, 91, 98, 120, and 365 days — all ≥ 90 days to avoid data leakage into the test period
+- **Rolling means** (7-day and 28-day windows) shifted by 90 and 365 days, capturing recent trend and year-ago seasonality
+- **Cyclical calendar encoding** — month encoded as `sin/cos` so December and January are treated as adjacent, not opposite ends of a scale
+- **Standard calendar features** — day of week, week of year, is_weekend
 
+### Model
 
-* 
-**Scope**: 10 stores across 50 items (500 unique time series).
+**LightGBM** trained with a custom SMAPE evaluation metric. Validation uses a strict **time-based split** (no shuffling) to simulate real deployment conditions. Early stopping prevents overfitting. The final production model retrains on the full dataset using the optimal number of rounds found during validation.
 
+### Data Cleaning
 
-* 
-**Target**: Daily unit sales for Q1 2018.
+A small number of records had `sales = 0`, likely data entry gaps rather than true stockouts. These are corrected via **linear interpolation** within each store-item group before feature engineering.
 
+---
 
-
-### Data Quality & Sanitation
-
-* 
-**Zero-Sales Correction**: Handled records with zero sales via linear interpolation to maintain signal continuity and prevent noise distortion.
-
-
-* 
-**Memory Optimization**: Implemented specific data types (`int8`, `float32`) to ensure the pipeline remains efficient even as the dataset scales.
-
-
-
-##  Methodology
-
-### 1. Advanced Feature Engineering
-
-* 
-**Cyclical Encoding**: Applied sine and cosine transformations to month and day features to preserve temporal proximity (e.g., ensuring December and January are treated as adjacent).
-
-
-* 
-**Lag Analysis**: Utilized a strategic mix of 90-day to 365-day lags to anchor the model in both long-term seasonality and the current forecast horizon.
-
-
-* 
-**Rolling Windows**: Implemented 7-day and 28-day moving averages to capture short-term trend volatility.
-
-
-
-### 2. Modeling Strategy
-
-* 
-**Algorithm**: LightGBM (Gradient Boosting Decision Trees).
-
-
-* 
-**Validation**: Time-based holdout strategy using the final three months of 2017 (Oct–Dec) to prevent data leakage and simulate real-world deployment.
-
-
-* 
-**Metric**: SMAPE (Symmetric Mean Absolute Percentage Error).
-
-
-
-##  Results
-
-* 
-**Validation Performance**: **12.46% SMAPE**.
-
-
-* 
-**Seasonality Continuity**: The model correctly identified the sharp transition from the December peak to the January lull, with January 2018 predictions aligning closely with January 2017 historical averages.
-
-
-
-##  Project Structure
-
-The repository follows a production-ready modular structure:
-
-```text
-├── configs/                     # Externalized model & pipeline parameters
-├── data/                        # raw and processed datasets (Parquet format)
-├── notebooks/                   # Exploratory data analysis and experimentation
-├── scripts/                     # Modular execution scripts
-├── src/                         # Core importable source modules
-├── utils_ds_elite.py            # Reusable production-grade helper functions
-└── 7eleven_demand_forecasting.ipynb # End-to-end technical execution
+## Repository Structure
 
 ```
+7-eleven-demand-forecasting-production-pipeline/
+├── 7eleven_demand_forecasting.ipynb   # Full pipeline: ingestion → features → model → forecast
+├── requirements.txt                   # Python dependencies
+├── .gitignore                         # Excludes data files and outputs
+└── README.md
+```
 
-##  Installation & Usage
+The `data/` folder is excluded from version control (see `.gitignore`). To reproduce results, add your `train.csv` and `test.csv` to the project root and run the notebook.
 
-1. **Clone the repo**:
+---
+
+## Quickstart
+
 ```bash
-git clone https://github.com/[your-username]/7-eleven-demand-forecasting-production-pipeline.git
+git clone https://github.com/dragoscalin33/7-eleven-demand-forecasting-production-pipeline.git
 cd 7-eleven-demand-forecasting-production-pipeline
-
-```
-
-
-2. **Install dependencies**:
-```bash
 pip install -r requirements.txt
-
+jupyter notebook 7eleven_demand_forecasting.ipynb
 ```
 
+**Expected input files** (place in project root):
 
-3. **Run the pipeline**: Execute the `7eleven_demand_forecasting.ipynb` notebook to reproduce the results.
-
----
-
-*##  Author
-
-**Dragos Estefan Calin**  
-Data Scientist  
-[LinkedIn](https://linkedin.com/in/YOUR_PROFILE) · [GitHub](https://github.com/YOUR_USERNAME)
+| File | Columns |
+|------|---------|
+| `train.csv` | `date`, `store`, `item`, `sales` |
+| `test.csv` | `id`, `date`, `store`, `item` |
 
 ---
 
-*Built as part of the Gosoft (Thailand) Data Scientist hiring challenge — January 2026.*
+## Key Design Decisions
+
+**Why a global model instead of per-series models?**
+500 individual ARIMA or ETS models would be brittle, slow to train, and unable to share information across series. A single LightGBM model generalizes better by learning that "weekends sell more" or "January always dips" applies across all stores and items.
+
+**Why minimum 90-day lags?**
+The test period starts exactly 90 days after the training cutoff. Using shorter lags (e.g., lag_7 or lag_30) would require recursive multi-step prediction, where each step's error compounds into the next. Constraining all lags to ≥ 90 days means every feature is computed from known historical data — no error accumulation.
+
+**Why SMAPE over MAE or RMSE?**
+Items with 5 daily sales and items with 500 daily sales should be weighted equally in a retail context. SMAPE normalizes errors by the scale of each series, treating a 10-unit error on a low-volume item the same as a 100-unit error on a high-volume item.
+
+---
+
+## Dependencies
+
+```
+lightgbm >= 4.1
+pandas >= 2.0
+numpy >= 1.24
+matplotlib >= 3.7
+seaborn >= 0.12
+pyarrow >= 13.0
+```
+
+---
+
+## Author
+
+**Dragos Estefan Calin** — Data Scientist
+
+[LinkedIn](https://www.linkedin.com/in/dragos-calin) · [GitHub](https://github.com/dragoscalin33)
