@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>7-Eleven Demand Forecasting: Before vs After</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+  h1 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #00b4d8, #48cae4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 1rem;
+    margin-bottom: 48px;
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 60px 1fr;
+    gap: 0;
+    align-items: start;
+  }
+
+  .column-header {
+    text-align: center;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.5px;
+  }
+  .old-header {
+    background: linear-gradient(135deg, #7f1d1d, #991b1b);
+    border: 1px solid #dc2626;
+  }
+  .new-header {
+    background: linear-gradient(135deg, #14532d, #166534);
+    border: 1px solid #22c55e;
+  }
+
+  .step {
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+  }
+  .step:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .step-number {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 28px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+  .step-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: inline;
+  }
+  .step-desc {
+    margin-top: 8px;
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    line-height: 1.5;
+    padding-left: 36px;
+  }
+
+  .old .step {
+    background: #1e1b2e;
+    border: 1px solid #3b3556;
+  }
+  .old .step-number {
+    background: #dc2626;
+    color: white;
+  }
+
+  .new .step {
+    background: #0f1f2e;
+    border: 1px solid #1e3a4f;
+  }
+  .new .step-number {
+    background: #00b4d8;
+    color: #0f172a;
+  }
+
+  .badge-new {
+    display: inline-block;
+    background: #00b4d8;
+    color: #0f172a;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+  }
+
+  .arrow-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 80px;
+  }
+  .arrow-icon {
+    font-size: 2rem;
+    color: #00b4d8;
+    margin: 8px 0;
+  }
+
+  .explainer {
+    margin-top: 48px;
+    background: linear-gradient(135deg, #0c1e30, #0f2942);
+    border: 1px solid #1e4d6e;
+    border-radius: 16px;
+    padding: 28px 32px;
+  }
+  .explainer h2 {
+    font-size: 1.3rem;
+    margin-bottom: 16px;
+    color: #48cae4;
+  }
+  .explainer p {
+    color: #94a3b8;
+    line-height: 1.7;
+    margin-bottom: 12px;
+    font-size: 0.92rem;
+  }
+  .explainer .analogy {
+    background: #0a1929;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-top: 12px;
+    border-left: 4px solid #00b4d8;
+  }
+  .explainer .analogy strong { color: #e0e7ff; }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 40px;
+  }
+  .metric-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+  .metric-card .label { color: #94a3b8; font-size: 0.82rem; margin-bottom: 6px; }
+  .metric-card .value { font-size: 1.8rem; font-weight: 700; }
+  .metric-card .value.teal { color: #00b4d8; }
+  .metric-card .value.green { color: #22c55e; }
+  .metric-card .value.orange { color: #f97316; }
+  .metric-card .value.blue { color: #60a5fa; }
+  .metric-card .value.purple { color: #a78bfa; }
+
+  .legend {
+    margin-top: 40px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.82rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>7-Eleven Demand Forecasting</h1>
+  <p class="subtitle">From Single Notebook to Production Pipeline</p>
+
+  <div class="comparison">
+
+    <!-- OLD PIPELINE -->
+    <div class="old">
+      <div class="column-header old-header">Before: Single Notebook</div>
+
+      <div class="step">
+        <span class="step-number">1</span>
+        <span class="step-title">Open Notebook</span>
+        <div class="step-desc">Open <code>7eleven_demand_forecasting.ipynb</code>. Run cells manually, top to bottom. Everything in one file.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">2</span>
+        <span class="step-title">Load & Clean</span>
+        <div class="step-desc">Hardcoded paths. <code>pd.read_csv('train.csv')</code>. Interpolate zeros inline. No validation.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">3</span>
+        <span class="step-title">Feature Engineering</span>
+        <div class="step-desc">Calendar features + 5 lags + 3 rolling windows. Hardcoded lag values. No interactions or expanding windows.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">4</span>
+        <span class="step-title">Train Model</span>
+        <div class="step-desc">LightGBM with manually picked hyperparameters. Single time-based split. No systematic tuning.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">5</span>
+        <span class="step-title">Evaluate</span>
+        <div class="step-desc">Custom SMAPE function. One feature importance plot. No cross-validation, no error analysis.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">6</span>
+        <span class="step-title">Submit</span>
+        <div class="step-desc">Retrain on full data with hardcoded <code>num_boost_round=1450</code>. Save CSV. No artifact, no API, no tracking.</div>
+      </div>
+    </div>
+
+    <!-- ARROW -->
+    <div class="arrow-col">
+      <div class="arrow-icon">&#10132;</div>
+    </div>
+
+    <!-- NEW PIPELINE -->
+    <div class="new">
+      <div class="column-header new-header">After: Production Pipeline</div>
+
+      <div class="step">
+        <span class="step-number">1</span>
+        <span class="step-title">Configuration</span>
+        <span class="badge-new">YAML</span>
+        <div class="step-desc">All settings in <code>config/config.yaml</code>: lags, rolling windows, model params, Optuna search space. Zero hardcoded values.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">2</span>
+        <span class="step-title">Load & Clean</span>
+        <div class="step-desc">Config-driven paths and dtypes. Zero-sales interpolation from config. Saves interim parquet for reproducibility.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">3</span>
+        <span class="step-title">Feature Engineering</span>
+        <span class="badge-new">38 FEATURES</span>
+        <div class="step-desc">8 lags, 10 rolling windows (mean + std), 2 expanding stats, 3 interaction ratios, 14 calendar features. All config-driven.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">4</span>
+        <span class="step-title">Schema Validation</span>
+        <span class="badge-new">PANDERA</span>
+        <div class="step-desc">Validates store IDs (1-10), item IDs (1-50), sales &ge; 0, correct dtypes. Catches bad data before training.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">5</span>
+        <span class="step-title">Temporal Split</span>
+        <div class="step-desc">Train on Jan 2014 &ndash; Sep 2017, validate on Oct &ndash; Dec 2017. No data leakage &mdash; simulates real-world forecasting.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">6</span>
+        <span class="step-title">Optuna Tuning</span>
+        <span class="badge-new">AUTO-TUNING</span>
+        <div class="step-desc">15 trials with TPE sampler. Searches num_leaves, learning_rate, regularisation, depth. Finds best SMAPE automatically.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">7</span>
+        <span class="step-title">Cross-Validation</span>
+        <span class="badge-new">3-FOLD TEMPORAL</span>
+        <div class="step-desc">3 temporal folds with 90-day gap (matching forecast horizon). Reports SMAPE, MAPE, RMSE, MAE, R&sup2; with &plusmn; std.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">8</span>
+        <span class="step-title">Train Final Model</span>
+        <div class="step-desc">LightGBM with Optuna&rsquo;s best params. Early stopping at round 1,579/2,000. Native categorical feature handling.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">9</span>
+        <span class="step-title">Evaluate & Plot</span>
+        <div class="step-desc">5 metrics on holdout + 4 diagnostic plots: feature importance, residuals, forecast vs actual, error distribution. All logged to MLflow.</div>
+      </div>
+
+      <div class="step">
+        <span class="step-number">10</span>
+        <span class="step-title">Export & Serve</span>
+        <span class="badge-new">FASTAPI + MLFLOW</span>
+        <div class="step-desc">Retrain on all data. Export joblib artifact + submission CSV. MLflow registry. FastAPI with <code>/predict</code> and <code>/health</code>.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Explainer -->
+  <div class="explainer">
+    <h2>Why Temporal Cross-Validation?</h2>
+    <p>
+      In time series, you can&rsquo;t randomly shuffle data &mdash; that would let the model &ldquo;peek&rdquo; at the future. Our cross-validation creates 3 folds where each fold trains on the past and validates on a future 90-day window, with a 90-day gap between them (matching the actual forecast horizon).
+    </p>
+    <p>
+      This simulates what would happen in production: you train with historical data and predict 90 days forward. If the model performs well across all 3 folds, you can trust it will generalise to truly unseen future data.
+    </p>
+    <div class="analogy">
+      <strong>Analogy:</strong> Imagine predicting next quarter&rsquo;s weather. Random CV = mixing January and July data in training and testing (unrealistic). Temporal CV = always training on older months and testing on newer ones, exactly like you&rsquo;d do in real life.
+    </div>
+  </div>
+
+  <!-- Key Metrics -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="label">Holdout SMAPE</div>
+      <div class="value teal">12.33%</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">R&sup2; Score</div>
+      <div class="value green">0.931</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">CV SMAPE (3-fold)</div>
+      <div class="value orange">12.04%</div>
+    </div>
+    <div class="metric-card">
+      <div class="label">Engineered Features</div>
+      <div class="value purple">38</div>
+    </div>
+  </div>
+
+  <p class="legend">7-Eleven Demand Forecasting &mdash; Production Pipeline v1.0</p>
+</div>
+</body>
+</html>
